@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	git "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 )
 
 const listHeight = 14
@@ -107,21 +107,7 @@ type (
 
 func (m model) updateBranch(i item) tea.Cmd {
 	return func() tea.Msg {
-		r, err := git.PlainOpenWithOptions("", &git.PlainOpenOptions{
-			DetectDotGit: true,
-		})
-		if err != nil {
-			return errorMsg(err)
-		}
-
-		wt, err := r.Worktree()
-		if err != nil {
-			return errorMsg(err)
-		}
-
-		err = wt.Checkout(&git.CheckoutOptions{
-			Branch: plumbing.ReferenceName(i.name),
-		})
+		_, err := exec.Command("git", "checkout", i.short).CombinedOutput()
 		if err != nil {
 			return errorMsg(err)
 		}
