@@ -100,8 +100,10 @@ func (m model) Init() tea.Cmd {
 	}
 }
 
-type doneMsg struct{}
-type errorMsg error
+type (
+	doneMsg  struct{}
+	errorMsg error
+)
 
 func (m model) updateBranch(i item) tea.Cmd {
 	return func() tea.Msg {
@@ -119,7 +121,6 @@ func (m model) updateBranch(i item) tea.Cmd {
 
 		err = wt.Checkout(&git.CheckoutOptions{
 			Branch: plumbing.ReferenceName(i.name),
-			Force:  true,
 		})
 		if err != nil {
 			return errorMsg(err)
