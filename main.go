@@ -107,9 +107,9 @@ type (
 
 func (m model) updateBranch(i item) tea.Cmd {
 	return func() tea.Msg {
-		_, err := exec.Command("git", "checkout", i.short).CombinedOutput()
+		out, err := exec.Command("git", "checkout", i.short).CombinedOutput()
 		if err != nil {
-			return errorMsg(err)
+			return errorMsg(fmt.Errorf("unabled to checkout branch: %v; %s", string(out), err))
 		}
 
 		return doneMsg{}
@@ -159,7 +159,7 @@ func (m model) View() string {
 	s := "\n" + m.list.View()
 
 	if m.err != nil {
-		s = fmt.Sprintf("Error: %s\n\n%s", m.err, s)
+		s = fmt.Sprintf("%s\nError: %s", s, m.err)
 	}
 
 	return s
