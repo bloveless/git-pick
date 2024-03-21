@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	git "github.com/go-git/go-git/v5"
 )
 
 const listHeight = 14
@@ -24,12 +22,9 @@ var (
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 )
 
-type item struct {
-	name  string
-	short string
-}
+type item string
 
-func (i item) FilterValue() string { return i.short }
+func (i item) FilterValue() string { return string(i) }
 
 type itemDelegate struct{}
 
@@ -42,7 +37,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	str := fmt.Sprintf("%d. %s", index+1, i.short)
+	str := fmt.Sprintf("%d. %s", index+1, i)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
@@ -64,36 +59,16 @@ type newItemsMsg []list.Item
 
 func (m model) Init() tea.Cmd {
 	return func() tea.Msg {
-		repo, err := git.PlainOpenWithOptions("", &git.PlainOpenOptions{
-			DetectDotGit: true,
-		})
-		if errors.Is(err, git.ErrRepositoryNotExists) {
-			return tea.Quit
-		}
+		out, err := exec.Command("git", "for-each-ref", "--format", "%(refname:short)").CombinedOutput()
 		if err != nil {
-			panic(err)
+			return errorMsg(err)
 		}
 
-		b, err := repo.Branches()
-		if err != nil {
-			panic(err)
-		}
-		defer b.Close()
+		branches := strings.Split(strings.TrimSpace(string(out)), "\n")
 
 		var items []list.Item
-		for {
-			ref, err := b.Next()
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if err != nil {
-				panic(err)
-			}
-
-			items = append(items, item{
-				name:  ref.Name().String(),
-				short: ref.Name().Short(),
-			})
+		for _, b := range branches {
+			items = append(items, item(b))
 		}
 
 		return newItemsMsg(items)
@@ -107,7 +82,7 @@ type (
 
 func (m model) updateBranch(i item) tea.Cmd {
 	return func() tea.Msg {
-		out, err := exec.Command("git", "checkout", i.short).CombinedOutput()
+		out, err := exec.Command("git", "checkout", string(i)).CombinedOutput()
 		if err != nil {
 			return errorMsg(fmt.Errorf("unabled to checkout branch: %v; %s", string(out), err))
 		}
@@ -130,7 +105,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(item)
 			if ok {
-				m.choice = string(i.name)
+				m.choice = string(i)
 				return m, m.updateBranch(i)
 			}
 
