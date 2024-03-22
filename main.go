@@ -26,66 +26,94 @@ const (
 	demoView
 )
 
+func focusedCmd() tea.Cmd {
+	return func() tea.Msg {
+		return focusedMsg{}
+	}
+}
+
 type model struct {
 	pick        tea.Model
+	demo        tea.Model
 	currentView view
 }
 
 type (
-	doneMsg  struct{}
-	errorMsg error
+	doneMsg    struct{}
+	focusedMsg struct{}
+	errorMsg   error
 )
 
 func (m model) Init() tea.Cmd {
 	pCmd := m.pick.Init()
-	return tea.Batch(pCmd)
+	dCmd := m.demo.Init()
+	return tea.Batch(pCmd, dCmd)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		var cmd tea.Cmd
-		var cmds []tea.Cmd
-		m.pick, cmd = m.pick.Update(msg)
-		cmds = append(cmds, cmd)
-		// TODO: All views should receive these messages even if they aren't active
-		return m, tea.Batch(cmds...)
+		newPick, pCmd := m.pick.Update(msg)
+		m.pick = newPick
+
+		newDemo, dCmd := m.demo.Update(msg)
+		m.demo = newDemo
+
+		return m, tea.Batch(pCmd, dCmd)
 
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "q", "ctrl+c":
 			// INFO: intercepted and handled by this, the parent model
 			return m, tea.Quit
+
 		case "*":
 			m.currentView = demoView
-			return m, nil
-		}
+			return m, focusedCmd()
 
+		case "#":
+			m.currentView = pickView
+			return m, focusedCmd()
+		}
 	}
 
 	switch m.currentView {
 	case pickView:
-		var cmd tea.Cmd
-		m.pick, cmd = m.pick.Update(msg)
-		return m, cmd
-	}
+		newPick, cmd := m.pick.Update(msg)
+		m.pick = newPick
 
-	// This means that there wasn't a selected view... how strange
-	return m, nil
+		return m, cmd
+
+	case demoView:
+		newDemo, cmd := m.demo.Update(msg)
+		m.demo = newDemo
+
+		return m, cmd
+
+	default:
+		// This means that there wasn't a selected view... how strange
+		return m, nil
+	}
 }
 
 func (m model) View() string {
-	if m.currentView == pickView {
+	switch m.currentView {
+	case pickView:
 		return m.pick.View()
-	}
 
-	return "ERR: NO CURRENT VIEW"
+	case demoView:
+		return m.demo.View()
+
+	default:
+		return "ERR: NO CURRENT VIEW"
+	}
 }
 
 func main() {
 	pv := newPick()
+	dv := newDemo()
 
-	m := model{currentView: pickView, pick: pv}
+	m := model{currentView: pickView, pick: pv, demo: dv}
 
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
