@@ -33,7 +33,7 @@ func newPick() pick {
 
 func (p pick) Init() tea.Cmd {
 	return func() tea.Msg {
-		out, err := exec.Command("git", "for-each-ref", "--format", "%(refname:short)").CombinedOutput()
+		out, err := exec.Command("git", "for-each-ref", "--format", "%(refname:short)", "refs/heads").CombinedOutput()
 		if err != nil {
 			return errorMsg(err)
 		}
