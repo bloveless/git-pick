@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	go build -o build/git-pick ./...
+	go build -o build/ ./...
 
 .PHONY: build-amd64
 build-amd64:

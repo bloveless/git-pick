@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"git-pick/graph"
+
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -50,6 +52,7 @@ type demo struct {
 	textInput      textinput.Model
 	spinner        spinner.Model
 	progress       progress.Model
+	graph          graph.Model
 	focusedModel   focusedModel
 	currentSpinner int
 }
@@ -60,6 +63,7 @@ func newDemo() demo {
 	d := demo{
 		textInput: ti,
 		progress:  progress.New(progress.WithDefaultGradient()),
+		graph:     graph.New(),
 	}
 
 	d.resetSpinner()
@@ -189,7 +193,7 @@ func (d demo) View() string {
 	}
 
 	row2 := lipgloss.JoinHorizontal(lipgloss.Top, d.styleWidget(focusedInput, d.textInput.View()), hello)
-	return lipgloss.JoinVertical(lipgloss.Left, row1, row2)
+	return lipgloss.JoinVertical(lipgloss.Left, row1, row2) + "\n\n" + d.graph.View()
 }
 
 func tickCmd() tea.Cmd {
